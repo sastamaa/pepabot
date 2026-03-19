@@ -10,47 +10,49 @@ module.exports = async (req, res) => {
   };
 
   try {
-    const symbols = await getTopSymbols(25);
-    const debug = [];
-    const signals = [];
+    const symbols = await getTopSymbols(20);
+    const allSignals = [];
 
+    // Збираємо всі сигнали
     for (const symbol of symbols) {
       try {
         const klines = await getKlines(symbol);
-
-        // Діагностика — що повертає getKlines
-        const klinesInfo = klines
-          ? `отримано ${klines.length} свічок, остання ціна: ${klines[klines.length-1]?.close}`
-          : 'NULL — свічки не отримані!';
-
         const signal = klines ? analyzeSignal(klines, symbol) : null;
-
-        debug.push({
-          symbol,
-          klines: klinesInfo,
-          signal: signal ? signal.direction : 'немає'
-        });
-
-        if (signal) {
-          signals.push({ symbol, signal });
-          await sendSignal(symbol, signal);
-          await new Promise(r => setTimeout(r, 500));
-        }
-
+        if (signal) allSignals.push({ symbol, signal });
       } catch (e) {
-        debug.push({ symbol, error: e.message });
+        console.error(`Помилка ${symbol}:`, e.message);
       }
     }
 
-    if (signals.length === 0) {
-      const bot = new TelegramBot(process.env.BOT_TOKEN);
-      await bot.sendMessage(process.env.CHAT_ID, '🔍 Перевірено топ-25 монет — сигналів немає. Чекаємо...');
+    // Сортуємо за score і беремо топ-3
+    const top3 = allSignals
+      .sort((a, b) => b.signal.score - a.signal.score)
+      .slice(0, 3);
+
+    const bot = new TelegramBot(process.env.BOT_TOKEN);
+
+    if (top3.length === 0) {
+      await bot.sendMessage(
+        process.env.CHAT_ID,
+        '🔍 Перевірено 20 монет — сигналів немає. Чекаємо...'
+      );
+    } else {
+      // Спочатку заголовок
+      await bot.sendMessage(
+        process.env.CHAT_ID,
+        `📊 *Топ-${top3.length} сигнали* (з 20 монет)`,
+        { parse_mode: 'Markdown' }
+      );
+      // Потім кожен сигнал окремо
+      for (const { symbol, signal } of top3) {
+        await sendSignal(symbol, signal);
+        await new Promise(r => setTimeout(r, 500));
+      }
     }
 
     send(200, {
-      message: `✅ Перевірено: ${symbols.length} | Сигналів: ${signals.length}`,
-      debug,  // ← тут побачимо де проблема
-      signals: signals.map(s => s.symbol)
+      message: `✅ Перевірено: ${symbols.length} | Знайдено: ${allSignals.length} | Відправлено: ${top3.length}`,
+      top3: top3.map(s => ({ symbol: s.symbol, direction: s.signal.direction, score: s.signal.score.toFixed(1) }))
     });
 
   } catch (e) {
