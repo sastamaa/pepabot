@@ -1,9 +1,15 @@
 const TelegramBot = require('node-telegram-bot-api');
-const { getTopSymbols, getKlines } = require('../lib/market');  // ← новий файл
+const { getTopSymbols, getKlines } = require('../lib/market');
 const { analyzeSignal } = require('../lib/indicators');
 const { sendSignal } = require('../lib/telegram');
 
 module.exports = async (req, res) => {
+  // Хелпер для відповіді (замість res.status().json())
+  const send = (code, data) => {
+    res.writeHead(code, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+  };
+
   try {
     const symbols = await getTopSymbols(25);
     console.log('✅ Монети отримано:', symbols.join(', '));
@@ -32,7 +38,7 @@ module.exports = async (req, res) => {
       );
     }
 
-    res.status(200).json({
+    send(200, {
       message: `✅ Перевірено: ${symbols.length} | Сигналів: ${signals.length}`,
       symbols,
       signals: signals.map(s => s.symbol)
@@ -40,6 +46,6 @@ module.exports = async (req, res) => {
 
   } catch (e) {
     console.error('Критична помилка:', e.message);
-    res.status(500).json({ error: e.message });
+    send(500, { error: e.message });
   }
 };
