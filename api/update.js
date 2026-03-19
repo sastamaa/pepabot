@@ -1,3 +1,4 @@
+const TelegramBot = require('node-telegram-bot-api');  // ← додай цей рядок нагорі!
 const { getTopSymbols, getKlines } = require('../lib/bybit');
 const { analyzeSignal } = require('../lib/indicators');
 const { sendSignal } = require('../lib/telegram');
