@@ -1,7 +1,7 @@
 {
   "name": "bybit-signal-bot",
   "version": "1.0.0",
-  "scripts": { "start": "node api/update.js" },
+  "scripts": { "start": "node server.js" },
   "dependencies": {
     "node-telegram-bot-api": "^0.66.0",
     "node-fetch": "^2.7.0"
