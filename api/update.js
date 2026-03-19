@@ -1,13 +1,12 @@
-const TelegramBot = require('node-telegram-bot-api');  // ← додай цей рядок нагорі!
-const { getTopSymbols, getKlines } = require('../lib/bybit');
+const TelegramBot = require('node-telegram-bot-api');
+const { getTopSymbols, getKlines } = require('../lib/market');  // ← новий файл
 const { analyzeSignal } = require('../lib/indicators');
 const { sendSignal } = require('../lib/telegram');
 
 module.exports = async (req, res) => {
   try {
-    // Автоматично беремо топ-25 монет за обʼємом
     const symbols = await getTopSymbols(25);
-    console.log('Перевіряємо монети:', symbols);
+    console.log('✅ Монети отримано:', symbols.join(', '));
 
     const signals = [];
 
@@ -25,16 +24,16 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Якщо немає сигналів — надіслати коротке повідомлення
     if (signals.length === 0) {
-      const bot = new (require('node-telegram-bot-api'))(process.env.BOT_TOKEN);
-      await bot.sendMessage(process.env.CHAT_ID, '🔍 Перевірено топ-25 монет — сигналів немає. Чекаємо...');
+      const bot = new TelegramBot(process.env.BOT_TOKEN);
+      await bot.sendMessage(
+        process.env.CHAT_ID,
+        '🔍 Перевірено топ-25 монет — сигналів немає. Чекаємо...'
+      );
     }
 
-    const result = `✅ Перевірено: ${symbols.length} монет | Сигналів: ${signals.length}`;
-    console.log(result);
     res.status(200).json({
-      message: result,
+      message: `✅ Перевірено: ${symbols.length} | Сигналів: ${signals.length}`,
       symbols,
       signals: signals.map(s => s.symbol)
     });
